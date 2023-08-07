@@ -45,6 +45,21 @@ class StoreAPI
         }
     }
 
+    // GET @route: /store?find=[name]
+    public function getStoresByName($searchTerm)
+    {
+        if ($searchTerm) {
+            $sql = "SELECT * FROM magasin WHERE nom LIKE :searchTerm";
+            $stmt = $this->db->prepare($sql);
+            $stmt->bindValue(':searchTerm', '%' . $searchTerm . '%');
+            $stmt->execute();
+
+            $stores = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            header('Content-Type: application/json');
+            echo json_encode($stores);
+        }
+    }
+
     // POST @route: /store
     // form-data: [nom]:[string]
     public function addStore()
@@ -156,7 +171,11 @@ class StoreAPI
                 case 'GET':
                     if ($id !== null) {
                         $this->getStoreById($id);
-                    } else {
+                    }
+                    elseif (isset($_GET['find'])) {
+                        $this->getStoresByName($_GET['find']);
+                    }
+                    else {
                         $this->getStores();
                     }
                     break;

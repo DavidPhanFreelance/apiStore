@@ -9,8 +9,9 @@ _______________________________
 
 Voici les fonction développé pour l'API:
 
-GET         /magasins/
-            /magasins/{id}
-POST        /magasins
-PUT         /magasins/{id}
-DELETE      /magasins/{id}
+GET         /store/
+            /store/{id}
+            /store?find=[name]
+POST        /store
+PUT         /store/{id}
+DELETE      /store/{id}
