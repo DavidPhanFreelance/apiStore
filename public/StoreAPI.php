@@ -44,10 +44,11 @@ class StoreAPI
             http_response_code(404);
             echo json_encode(array('message' => 'Magasin non trouvé.'));
         }
+        return $store;
     }
 
     // POST @route: /store
-    // param : [nom]
+    // form-data: [nom]:[string]
     public function addStore()
     {
         if (isset($_POST['nom'])) {
@@ -71,119 +72,110 @@ class StoreAPI
         }
     }
 
-    // PUT @route: /store/{id}
-    // param : [nom]
+    // PATCH @route: /store/{id}
+    // JSON : {"nom": "Samsung Shop"}
     public function changeNameStore($id)
     {
-
-        if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
-            // Récupérer les données du corps de la requête (raw data)
+        if ($_SERVER['REQUEST_METHOD'] === 'PATCH') {
             $rawData = file_get_contents("php://input");
-            parse_str($rawData, $requestData); // Convertir les données en tableau associatif
+            $requestData = json_decode($rawData, true);
 
-            // Vérifier si le champ 'nom' est présent dans les données
             if (isset($requestData['nom'])) {
-                $newName = $requestData['nom'];
-                var_dump($newName);
-                // ... (suite du code comme précédemment)
-            } else {
+                $existingStore = $this->getStoreById($id);
+
+                if ($existingStore) {
+                    $newName = $requestData['nom'];
+                    $sql = "UPDATE magasin SET nom = :nom WHERE id = :id";
+                    $stmt = $this->db->prepare($sql);
+                    $stmt->bindValue(':nom', $newName, PDO::PARAM_STR);
+                    $stmt->bindValue(':id', $id, PDO::PARAM_INT);
+                    $success = $stmt->execute();
+
+                    if ($success) {
+                        http_response_code(201);
+                    } else {
+                        http_response_code(500);
+                        echo json_encode(array('message' => "Une erreur est survenue lors de la modification du nom du magasin."));
+                    }
+                }
+            }
+            else {
                 http_response_code(400);
-                echo json_encode(array('message' => "Données incorrectes."));
+                echo json_encode(array('message' => 'Paramètre "nom" manquant dans la requête.'));
             }
-        } else {
-            http_response_code(405);
-            echo json_encode(array('message' => 'Méthode non autorisée.'));
         }
-
-
-        if (isset($_POST['nom'])) {
-            $nomMagasin = $_POST['nom'];
-            var_dump($nomMagasin);
-            die;
-        }
-
-        var_dump("na pas marché ");
-        die;
-
-        // Récupérer les données brutes de la requête PUT
-        $data = file_get_contents("php://input");
-        $putData = json_decode($data, true);
-        var_dump($putData);
-
-        if (isset($putData['nom'])) {
-            $paramValue = $putData['nom'];
-            // Faire quelque chose avec la valeur du paramètre
-        }
-
-        var_dump($paramValue);
-
-        die;
-
-        // Vérifier si le champ 'nom' est présent dans les données
-        if (isset($requestData['nom'])) {
-            $newName = $requestData['nom'];
-
-            // Préparation de la requête SQL
-            $sql = "UPDATE magasin SET nom = :newName WHERE id = :id";
-            $stmt = $this->db->prepare($sql);
-            $stmt->bindParam(':newName', $newName, PDO::PARAM_STR);
-            $stmt->bindParam(':id', $id, PDO::PARAM_INT);
-
-            // Exécution de la requête
-            $success = $stmt->execute();
-
-            if ($success) {
-                http_response_code(200);
-                echo json_encode(array('message' => 'Nom du magasin modifié avec succès.'));
-            } else {
-                http_response_code(500);
-                echo json_encode(array('message' => "Une erreur est survenue lors de la modification du nom du magasin."));
-            }
-        } else {
-            http_response_code(400);
-            echo json_encode(array('message' => "Données incorrectes."));
+        else {
+            $this->methodNotAllowed();
         }
     }
 
+    public function deleteStore($id)
+    {
+        if ($id) {
+            $existingStore = $this->getStoreById($id);
+
+            if ($existingStore) {
+                $sql = "DELETE FROM magasin WHERE id = :id";
+                $stmt = $this->db->prepare($sql);
+                $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+                $success = $stmt->execute();
+
+                if ($success) {
+                    http_response_code(200);
+                    echo json_encode(array('message' => 'Magasin supprimé avec succès.'));
+                }
+                else {
+                    http_response_code(500);
+                    echo json_encode(array('message' => "Une erreur est survenue lors de la suppression du magasin."));
+                }
+            }
+            else {
+                http_response_code(404);
+                echo json_encode(array('message' => 'Magasin non trouvé.'));
+            }
+        }
+        else {
+            $this->methodNotAllowed();
+        }
+    }
+
+
     public function handleRequest()
     {
-        $requestMethod = $_SERVER['REQUEST_METHOD'];
-        $requestUrl = $_SERVER['REQUEST_URI'];
-        $requestUrlParts = explode('/', trim($requestUrl, '/'));
+        $method = $_SERVER['REQUEST_METHOD'];
+        $url_parts = parse_url($_SERVER['REQUEST_URI']);
+        $path = $url_parts['path'];
+        $path_parts = explode('/', $path);
 
-        switch ($requestMethod) {
-            case 'GET':
-                if ($requestUrlParts[0] === 'store') {
-                    if (count($requestUrlParts) === 1) {
-                        $this->getStores();
-                    } elseif (count($requestUrlParts) === 2) {
-                        $id = intval($requestUrlParts[1]);
+        // Assurez-vous que le premier élément du chemin est vide (en raison de la barre oblique initiale)
+        array_shift($path_parts);
+
+        if ($path_parts[0] === 'store') {
+            $id = isset($path_parts[1]) ? (int) $path_parts[1] : null;
+
+            switch ($method) {
+                case 'GET':
+                    if ($id !== null) {
                         $this->getStoreById($id);
                     } else {
-                        $this->notFound();
+                        $this->getStores();
                     }
-                } else {
-                    $this->notFound();
-                }
-                break;
-            case 'POST':
-                if ($requestUrlParts[0] === 'store' && count($requestUrlParts) === 1) {
+                    break;
+                case 'POST':
                     $this->addStore();
-                } else {
-                    $this->notFound();
-                }
-                break;
-            case 'PUT':
-                if (count($requestUrlParts) === 2) {
-                    $id = intval($requestUrlParts[1]);
+                    break;
+                case 'PATCH':
                     $this->changeNameStore($id);
-                } else {
-                    $this->notFound();
-                }
-                break;
-
-            default:
-                $this->methodNotAllowed();
+                    break;
+                case 'DELETE':
+                    $this->deleteStore($id);
+                    break;
+                default:
+                    $this->methodNotAllowed();
+                    break;
+            }
+        } else {
+            $this->notFound();
         }
     }
 
