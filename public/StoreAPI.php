@@ -44,7 +44,6 @@ class StoreAPI
             http_response_code(404);
             echo json_encode(array('message' => 'Magasin non trouvé.'));
         }
-        return $store;
     }
 
     // POST @route: /store
@@ -80,10 +79,8 @@ class StoreAPI
             $rawData = file_get_contents("php://input");
             $requestData = json_decode($rawData, true);
 
-            if (isset($requestData['nom'])) {
-                $existingStore = $this->getStoreById($id);
-
-                if ($existingStore) {
+            if (isset($requestData['nom']) && $id) {
+                if ($this->checkIfStoreExist($id)) {
                     $newName = $requestData['nom'];
                     $sql = "UPDATE magasin SET nom = :nom WHERE id = :id";
                     $stmt = $this->db->prepare($sql);
@@ -93,15 +90,20 @@ class StoreAPI
 
                     if ($success) {
                         http_response_code(201);
-                    } else {
+                        echo json_encode(array('message' => "Le nom du magasin a été modifié avec succès."));
+                    }
+                    else {
                         http_response_code(500);
                         echo json_encode(array('message' => "Une erreur est survenue lors de la modification du nom du magasin."));
                     }
                 }
+                else {
+                    http_response_code(404);
+                    echo json_encode(array('message' => 'Magasin non trouvé.'));
+                }
             }
             else {
-                http_response_code(400);
-                echo json_encode(array('message' => 'Paramètre "nom" manquant dans la requête.'));
+                $this->paramError();
             }
         }
         else {
@@ -112,9 +114,7 @@ class StoreAPI
     public function deleteStore($id)
     {
         if ($id) {
-            $existingStore = $this->getStoreById($id);
-
-            if ($existingStore) {
+            if ($this->checkIfStoreExist($id)) {
                 $sql = "DELETE FROM magasin WHERE id = :id";
                 $stmt = $this->db->prepare($sql);
                 $stmt->bindParam(':id', $id, PDO::PARAM_INT);
@@ -146,12 +146,14 @@ class StoreAPI
         $url_parts = parse_url($_SERVER['REQUEST_URI']);
         $path = $url_parts['path'];
         $path_parts = explode('/', $path);
-
-        // Assurez-vous que le premier élément du chemin est vide (en raison de la barre oblique initiale)
         array_shift($path_parts);
 
         if ($path_parts[0] === 'store') {
-            $id = isset($path_parts[1]) ? (int) $path_parts[1] : null;
+            $id = isset($path_parts[1]) ? $path_parts[1] : null;
+            if ($id !== null && !ctype_digit($id)) {
+               $this->paramError();
+               return;
+            }
 
             switch ($method) {
                 case 'GET':
@@ -189,6 +191,21 @@ class StoreAPI
     {
         http_response_code(405);
         echo json_encode(array('message' => 'Méthode non autorisée.'));
+    }
+    private function paramError() {
+        http_response_code(400);
+        echo json_encode(array('message' => 'Erreur de paramètre'));
+    }
+
+    private function checkIfStoreExist($id)
+    {
+        $sql = "SELECT * FROM magasin WHERE id = :id";
+        $stmt = $this->db->prepare($sql);
+        $stmt->bindValue(':id', $id, PDO::PARAM_INT);
+        $stmt->execute();
+        $store = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return $store;
     }
 
 }
