@@ -5,3 +5,9 @@ WSHOP souhaite, via une API REST, avoir accès à une liste de magasins et pouvo
 Nous souhaitons également pouvoir ajouter, supprimer ou modifier le(s) magasin(s) de notre choix.
 Un code commenté et une documentation sur le fonctionnement de l’API sont attendus.
 Attention : Ne pas utiliser de framework SYMFONY ou LARAVEL.
+
+GET         /magasins/
+            /magasins/{id}
+POST        /magasins
+PUT         /magasins/{id}
+DELETE      /magasins/{id}
