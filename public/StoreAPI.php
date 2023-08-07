@@ -109,6 +109,7 @@ class StoreAPI
         }
     }
 
+    // DELETE @route: /store/{id}
     public function deleteStore($id)
     {
         if ($id) {
@@ -135,7 +136,6 @@ class StoreAPI
             $this->methodNotAllowed();
         }
     }
-
 
     public function handleRequest()
     {
