@@ -41,8 +41,7 @@ class StoreAPI
             echo json_encode($store);
         }
         else {
-            http_response_code(404);
-            echo json_encode(array('message' => 'Magasin non trouvé.'));
+            $this->notFound("Magasin non trouvé");
         }
     }
 
@@ -72,7 +71,7 @@ class StoreAPI
     }
 
     // PATCH @route: /store/{id}
-    // JSON : {"nom": "Samsung Shop"}
+    // JSON : {"nom": "ExampleXiaopple Shop"}
     public function changeNameStore($id)
     {
         if ($_SERVER['REQUEST_METHOD'] === 'PATCH') {
@@ -98,8 +97,7 @@ class StoreAPI
                     }
                 }
                 else {
-                    http_response_code(404);
-                    echo json_encode(array('message' => 'Magasin non trouvé.'));
+                    $this->notFound("Magasin non trouvé");
                 }
             }
             else {
@@ -130,8 +128,7 @@ class StoreAPI
                 }
             }
             else {
-                http_response_code(404);
-                echo json_encode(array('message' => 'Magasin non trouvé.'));
+                $this->notFound("Magasin non trouvé");
             }
         }
         else {
@@ -177,14 +174,14 @@ class StoreAPI
                     break;
             }
         } else {
-            $this->notFound();
+            $this->notFound("Erreur 404");
         }
     }
 
-    private function notFound()
+    private function notFound($message)
     {
         http_response_code(404);
-        echo json_encode(array('message' => 'Erreur 404.'));
+        echo json_encode(array('message' => $message));
     }
 
     private function methodNotAllowed()
